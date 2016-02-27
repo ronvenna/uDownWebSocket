@@ -43,7 +43,8 @@ if (process.env.MONGOLAB_URI) {
  */
 //Treat this as an app
 var app = require('./lib/apps');
-var controller = app.configure(8765, "23350178224.23361502390", "19938eaef76e57dd971551eb6d32822c", config, onInstallation);
+var port = process.env.PORT || 8765; 
+var controller = app.configure(port, "23350178224.23361502390", "19938eaef76e57dd971551eb6d32822c", config, onInstallation);
 
 
 /**
