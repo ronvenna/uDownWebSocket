@@ -65,8 +65,8 @@ function onInstallation(bot, installer) {
             if (err) {
                 console.log(err);
             } else {
-                convo.say('I am a bot that has just joined your team');
-                convo.say('You must now /invite me to a channel so that I can be of use!');
+                convo.say("Hey! I'm a bot that likes to organize events");
+                convo.say('Just shoot me a message and I can help you plan an event!');
             }
         });
     }
@@ -127,76 +127,176 @@ controller.on('bot_channel_join', function (bot, message) {
 });
 
 
-controller.hears(['.$'], 'direct_message', function (bot, message) {
-    console.log("TEXT FROM MESSAGE", message);
-    var usersFromMessage  = getUsersFromMessage(message.text);
-
-    console.log(message.user);
-
-
-    //Get the team token
+//On inital open make sure we save the user if its the first time we are taking to them
+controller.on('direct_message', function (bot, message) {
+    console.log("MESSAGE", message);
     getTeamToken(message.team, function(err, token){
         if(err) bot.reply(message, 'Sorry, im having an error!');
-        //Get the user object
         getUserFromAdminToken(token, message.user, function(err,user){
-            if(err) bot.reply(message, 'Sorry, im having an error!');
-            //Save the user
-            controller.storage.users.save(user,function(err, id) {
-                console.log('user stored in the database');
+            if(err){
+                //If there was no user save it
+                controller.storage.users.save(user,function(err, id) {
+                    console.log("Saved First Time user");
+                }); 
+            }
+        });
+    });
+});
 
-                usersFromMessage.forEach(function(userFromTest){
 
-                    //Make sure we get the team of this user so we can get the user name and pictures to create the event
+var askIfTheyWantToMakeAnEvent = function(response, convo) {
+    
+    var bot = this.bot; 
+    getTeamToken(convo.source_message.team, function(err, token){
+        if(err) bot.reply(message, 'Sorry, im having an error!');
+        //Get the user object
+        getUserFromAdminToken(token, convo.source_message.user, function(err,user){
+            if(err)bot.reply(message, 'Sorry, im having an error!');
+            convo.ask('Hey! ' + user.name + " do you want me to organize an event?", function(response, convo) {
+                if(["yes","yea","yup","yep","ya","sure","ok","y","yeah","yah"].indexOf(response.text.toLowerCase()) > -1){
+                    askPlace(response, convo, bot, user.name);
+                    convo.next();                   
+                }else if(["no","nah","nope", "no"].indexOf(response.text.toLowerCase()) > -1){
+                    convo.say('Okay for sure! Just holler if you want to!');
+                    convo.next();
+                }
+                else{
+                    tryAgain(response, convo);
+                    convo.next();
+                }
+            });
+        });
+    });
+}
 
-                    bot.startPrivateConversation({user: userFromTest}, function(response, convo){
-                      convo.say(user.name + " wants to get lunch with you breh! To check the status of this event click this link broski. " + "http://u-down.herokuapp.com/");
-                    });
-                });
+var tryAgain = function(response, convo) {
+    convo.say('Sorry didnt get you! Lets Try again.');
+    askIfTheyWantToMakeAnEvent(response, convo);
+    convo.next();
+}
 
-                bot.reply(message, 'I have notified your users about the event');
-            }); 
+var askPlace = function(response, convo, bot, userName) {
+  convo.ask('Where?', function(response, convo) {
+    convo.say('Awesome')
+    askWho(response, convo, bot, userName);
+    convo.next();
+  });
+}
+
+var askWho = function(response, convo, bot, userName) {
+  convo.ask('Who Would You like to Invite?', function(response, convo) {
+    convo.say('Cool')
+    askWhen(response, convo, bot, userName);
+    convo.next();
+  });
+}
+
+var askWhen = function(response, convo, bot, userName) {
+  convo.ask('What time should I set this event to?', function(response, convo) {
+    convo.say('Sweet I have sent the event!');
+
+    //Extract the responses
+    var responses = convo.extractResponses();
+    var place = responses['Where?'];
+    var time = responses['What time should I set this event to?'];
+    var who = getUsersFromMessage(responses['Who Would You like to Invite?']);
+    var team = response.team.toLowerCase();
+
+    console.log("REX", response);
+
+    who.forEach(function(user){
+        //Send 
+        //Make sure we get the team of this user so we can get the user name and pictures to create the event
+        bot.startPrivateConversation({user: user}, function(response, convo){
+          console.log("hit");
+          convo.say(userName + " wants to go to " + place + " at " + time);
+          convo.say("U Down?");
+          convo.say("To Check the status of this go to http://u-down.herokuapp.com/" + team); 
         });
     });
 
+    convo.next();
+  });
+}
 
+// var askWhereDeliver = function(response, convo) {
+//   convo.ask('So where do you want it delivered?', function(response, convo) {
+//     convo.say('Ok! Good bye.');
+//     convo.next();
+//   });
+// }
 
-    // controller.storage.users.get(message.user,function(err, user) {
-    //     if(!user){
-    //         console.log(err);
-    //         controller.storage.users.save(message.user,function(err, id) {
-    //             console.log('user stored in the database');
-    //         });
-    //     }else{
-    //         console.log("GOT USER!", user);
+controller.hears(["^hey(.*)","^hello(.*)","^hi(.*)","^h(.*)"],['direct_message','direct_mention','mention','ambient'],function(bot,message) {
 
-    //         usersFromMessage.forEach(function(userFromTest){
-
-    //             //Make sure we get the team of this user so we can get the user name and pictures to create the event
-
-    //             bot.startPrivateConversation({user: userFromTest}, function(response, convo){
-    //               convo.say(user.user + " wants to get lunch with you breh! To check the status of this event click this link broski. " + "http://u-down.herokuapp.com/");
-    //             });
-    //         });
-
-    //         bot.reply(message, 'I have notified your users about the event');
-    //     }
-    // });
-
-
+    this.bot = bot;
+    bot.startConversation(message, askIfTheyWantToMakeAnEvent.bind(this));
+    console.log(bot.utterances.no);
 });
 
+controller.hears(["^yes(.*)","^yea(.*)","^yup(.*)","^yep(.*)"
+                 ,"^ya(.*)","^sure(.*)","^ok(.*)","^yeah(.*)","^yah(.*)"],['direct_message','direct_mention','mention','ambient'],function(bot,message) {
+
+    // this.bot = bot;
+    // bot.startConversation(message, askIfTheyWantToMakeAnEvent.bind(this));
+    // console.log(bot.utterances.no);
+    bot.reply(message, "Awesome I will update your invite!");
+});
+
+controller.hears(["^no(.*)","^nah(.*)","^nope(.*)","^no(.*)"],['direct_message','direct_mention','mention','ambient'],function(bot,message) {
+
+    // this.bot = bot;
+    // bot.startConversation(message, askIfTheyWantToMakeAnEvent.bind(this));
+    // console.log(bot.utterances.no);
+    bot.reply(message, "Awesome I will update your invite!");
+});
 
 controller.hears(['.$'], 'direct_message,direct_mention,mention', function (bot, message) {
-    bot.reply(message, 'U Down Breh!');
-    // persist new users to database
-    controller.storage.users.get(message.user,function(err, user) {
-	    if (!user) {
-		user = {
-		   id: message.user,
-	    	};
-	    	controller.storage.users.save(user,function(err, id) {
-	    	    console.log('user stored in the database');
-	    	});
-	    }
-    });
+    bot.reply(message, 'Sorry didnt get you!');
+    bot.startConversation(message, askIfTheyWantToMakeAnEvent.bind(this));
 });
+
+
+// controller.hears(['dbdbhdhfs'], 'direct_message', function (bot, message) {
+//     console.log("TEXT FROM MESSAGE", message);
+//     var usersFromMessage  = getUsersFromMessage(message.text);
+
+
+
+//     if(["y","yes","yea","yup"].indexOf(message.text.toLowerCase()) > -1){
+//         bot.reply(message, "Ok just give me a place and time and a few of your friends!");
+//     }
+//     //Check to make sure there are some users in the event they want to create
+//     else if(usersFromMessage.length == 0){
+//         bot.reply(message, "Hey! I plan events, please give me a time a place and some people you want to invite and I can notify them about the event. Do you want to plan an event?");
+//     }else{
+//         //Get the team token
+//         getTeamToken(message.team, function(err, token){
+//             if(err) bot.reply(message, 'Sorry, im having an error!');
+//             //Get the user object
+//             getUserFromAdminToken(token, message.user, function(err,user){
+//                 if(err) bot.reply(message, 'Sorry, im having an error!');
+//                 //Save the user
+//                 controller.storage.users.save(user,function(err, id) {
+//                     console.log('user stored in the database');
+
+//                     usersFromMessage.forEach(function(userFromTest){
+
+//                         //Make sure we get the team of this user so we can get the user name and pictures to create the event
+
+//                         bot.startPrivateConversation({user: userFromTest}, function(response, convo){
+//                           convo.say(user.name + " wants to get lunch with you breh! To check the status of this event click this link broski. " + "http://u-down.herokuapp.com/");
+//                         });
+//                     });
+
+//                     bot.reply(message, 'Cool I have notified your users about the event! you can use this link to see if they are down to come! http://u-down.herokuapp.com/');
+//                 }); 
+//             });
+//         });
+//     }
+
+// });
+
+
+// controller.hears(['.$'], 'direct_message,direct_mention,mention', function (bot, message) {
+//     bot.reply(message, 'Sorry didnt get you!, can you try again?');;
+// });
