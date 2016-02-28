@@ -80,12 +80,11 @@ function sayYesToEvent(eventId, userId, callback){
         if(err){
             callback(err);
         }else{
-
+            console.log("EVENT", event);
             event.invited.forEach(function(userInvited, key){
                 console.log("USERRRRR", userInvited);
-                if(userInvited.id == userId){
+                if(userInvited == userId){
                     event.attending.push(userInvited);
-		    delete event.invited[key];
                     createEvent(event, function(err,id){
                         if(err){
                             callback(err);
@@ -315,7 +314,7 @@ var askWhen = function(response, convo, bot, userName) {
                     }else{
                         console.log(userNameId);
                         convo.say("Hey " + userNameId.name + "! " + userName + " wants to go to " + place + " at " + time);
-                        convo.say("To Check the status of this go to http://u-down.herokuapp.com/" + event.id);
+                        convo.say("To Check the status of this go to http://u-down.herokuapp.com/id/" + event.id);
                         convo.ask("U Down? ",[
                           {
                             pattern: 'done',
@@ -364,7 +363,7 @@ var askWhen = function(response, convo, bot, userName) {
         });
 
         convo.say('Sweet I have sent the event!');
-        convo.say("To Check the status of this go to http://u-down.herokuapp.com/" + event.id); 
+        convo.say("To Check the status of this go to http://u-down.herokuapp.com/id/" + event.id); 
         convo.next();
     });
   });
