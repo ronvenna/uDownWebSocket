@@ -167,12 +167,10 @@ controller.on('direct_message', function (bot, message) {
     getTeamToken(message.team, function(err, token){
         if(err) bot.reply(message, 'Sorry, im having an error!');
         getUserFromAdminToken(token, message.user, function(err,user){
-            if(err){
-                //If there was no user save it
-                controller.storage.users.save(user,function(err, id) {
-                    console.log("Saved First Time user");
-                }); 
-            }
+            //Always Update user
+            controller.storage.users.save(user,function(err, id) {
+                console.log("Saved User");
+            }); 
         });
     });
 });
@@ -199,6 +197,7 @@ var askIfTheyWantToMakeAnEvent = function(response, convo) {
                     convo.next();
                 }
                 else{
+                    convo.say('Sorry didnt get you! Lets Try again.');
                     tryAgain(response, convo);
                     convo.next();
                 }
@@ -208,7 +207,6 @@ var askIfTheyWantToMakeAnEvent = function(response, convo) {
 }
 
 var tryAgain = function(response, convo) {
-    convo.say('Sorry didnt get you! Lets Try again.');
     askIfTheyWantToMakeAnEvent(response, convo);
     convo.next();
 }
@@ -223,9 +221,16 @@ var askPlace = function(response, convo, bot, userName) {
 
 var askWho = function(response, convo, bot, userName) {
   convo.ask('Who Would You like to Invite?', function(response, convo) {
-    convo.say('Cool')
-    askWhen(response, convo, bot, userName);
-    convo.next();
+    var users = getUsersFromMessage(response.text);
+    if(users.length > 0){
+        convo.say('Cool')
+        askWhen(response, convo, bot, userName);
+        convo.next();
+    }else{
+        convo.say('Sorry didnt see any invites! Lets Try again.');
+        tryAgain(response, convo);
+        convo.next();
+    }
   });
 }
 
@@ -255,12 +260,60 @@ var askWhen = function(response, convo, bot, userName) {
         who.forEach(function(user){
             //Send 
             //Make sure we get the team of this user so we can get the user name and pictures to create the event
-            bot.startPrivateConversation({user: user}, function(response, convo){
-              console.log("hit");
-              convo.say(userName + " wants to go to " + place + " at " + time);
-              convo.say("U Down?");
-              convo.say("To Check the status of this go to http://u-down.herokuapp.com/" + id.id); 
-            });
+            // bot.startPrivateConversation({user: user}, function(response, convo){
+            //   console.log("hit");
+            //   convo.say(userName + " wants to go to " + place + " at " + time);
+            //   convo.say("U Down?");
+            //   convo.say("To Check the status of this go to http://u-down.herokuapp.com/" + id.id); 
+            // });
+
+              // start a conversation to handle this response.
+              bot.startPrivateConversation({user: user},function(err,convo) {
+
+                bot.utterances.yes = new RegExp(/^(yes|yea|yup|yep|ya|sure|ok|y|yeah|yah|down|i'm down|imdown|im down)/i);
+                bot.utterances.no = new RegExp(/^(no|nah|nope|n|not down|notdown|naww|naw)/i);
+
+                controller.storage.users.get(user,function(err, userNameId) {
+                    if(err){
+                        console.log("ERR", err)
+                    }else{
+                        convo.say("Hey " + userNameId.name + "! " + userName + " wants to go to " + place + " at " + time);
+                        convo.say("To Check the status of this go to http://u-down.herokuapp.com/" + event.id);
+                        convo.ask("U Down? ",[
+                          {
+                            pattern: 'done',
+                            callback: function(response,convo) {
+                              convo.say('OK you are done!');
+                              convo.next();
+                            }
+                          },
+                          {
+                            pattern: bot.utterances.yes,
+                            callback: function(response,convo) {
+                              convo.say('Great! I will put you down as going!');
+                              convo.next();
+
+                            }
+                          },
+                          {
+                            pattern: bot.utterances.no,
+                            callback: function(response,convo) {
+                              convo.say('No Problem, I will put you down as a no.');
+                              convo.next();
+                            }
+                          },
+                          {
+                            default: true,
+                            callback: function(response,convo) {
+                              // just repeat the question
+                              convo.repeat();
+                              convo.next();
+                            }
+                          }
+                        ]);
+                    }
+                });
+              });
         });
 
         convo.say('Sweet I have sent the event!');
@@ -282,23 +335,6 @@ controller.hears(["^hey(.*)","^hello(.*)","^hi(.*)","^h(.*)"],['direct_message',
     this.bot = bot;
     bot.startConversation(message, askIfTheyWantToMakeAnEvent.bind(this));
     console.log(bot.utterances.no);
-});
-
-controller.hears(["^yes(.*)","^yea(.*)","^yup(.*)","^yep(.*)"
-                 ,"^ya(.*)","^sure(.*)","^ok(.*)","^yeah(.*)","^yah(.*)"],['direct_message','direct_mention','mention','ambient'],function(bot,message) {
-
-    // this.bot = bot;
-    // bot.startConversation(message, askIfTheyWantToMakeAnEvent.bind(this));
-    // console.log(bot.utterances.no);
-    bot.reply(message, "Awesome I will update your invite!");
-});
-
-controller.hears(["^no(.*)","^nah(.*)","^nope(.*)","^no(.*)"],['direct_message','direct_mention','mention','ambient'],function(bot,message) {
-
-    // this.bot = bot;
-    // bot.startConversation(message, askIfTheyWantToMakeAnEvent.bind(this));
-    // console.log(bot.utterances.no);
-    bot.reply(message, "Awesome I will update your invite!");
 });
 
 controller.hears(['.$'], 'direct_message,direct_mention,mention', function (bot, message) {
