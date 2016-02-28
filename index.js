@@ -21,6 +21,16 @@ function getUsersFromMessage(text) {
     return returnArray;
 };
 
+function makeid(){
+    var text = "";
+    var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+
+    for( var i=0; i < 12; i++ )
+        text += possible.charAt(Math.floor(Math.random() * possible.length));
+
+    return text;
+}
+
 function getUserFromAdminToken(token,user,callback) { 
     var options = { method: 'GET',
       url: 'https://slack.com/api/users.info',
@@ -69,7 +79,7 @@ function createEvent(event, callback){
     	if(err){
 	    callback(err);
 	} else {
-	    callback(null, event);
+	    callback(null, id);
 	}
     });
 }
@@ -221,7 +231,6 @@ var askWho = function(response, convo, bot, userName) {
 
 var askWhen = function(response, convo, bot, userName) {
   convo.ask('What time should I set this event to?', function(response, convo) {
-    convo.say('Sweet I have sent the event!');
 
     //Extract the responses
     var responses = convo.extractResponses();
@@ -230,20 +239,34 @@ var askWhen = function(response, convo, bot, userName) {
     var who = getUsersFromMessage(responses['Who Would You like to Invite?']);
     var team = response.team.toLowerCase();
 
-    console.log("REX", response);
 
-    who.forEach(function(user){
-        //Send 
-        //Make sure we get the team of this user so we can get the user name and pictures to create the event
-        bot.startPrivateConversation({user: user}, function(response, convo){
-          console.log("hit");
-          convo.say(userName + " wants to go to " + place + " at " + time);
-          convo.say("U Down?");
-          convo.say("To Check the status of this go to http://u-down.herokuapp.com/" + team); 
+    var event = {
+        id: makeid(),
+        name: place + "@" + time,
+        location: place,
+        time: time,
+        attending:[],
+        invited: who,
+        teamID: team
+    };
+
+    createEvent(event, function(err, id){
+        console.log("ID", id);
+        who.forEach(function(user){
+            //Send 
+            //Make sure we get the team of this user so we can get the user name and pictures to create the event
+            bot.startPrivateConversation({user: user}, function(response, convo){
+              console.log("hit");
+              convo.say(userName + " wants to go to " + place + " at " + time);
+              convo.say("U Down?");
+              convo.say("To Check the status of this go to http://u-down.herokuapp.com/" + id.id); 
+            });
         });
-    });
 
-    convo.next();
+        convo.say('Sweet I have sent the event!');
+        convo.say("To Check the status of this go to http://u-down.herokuapp.com/" + event.id); 
+        convo.next();
+    });
   });
 }
 
