@@ -95,6 +95,7 @@ controller.on('bot_channel_join', function (bot, message) {
     bot.reply(message, "I'm here!")
 });
 
+
 controller.hears(['.$'], 'direct_message', function (bot, message) {
     console.log("TEXT FROM MESSAGE", message);
     var usersFromMessage  = getUsersFromMessage(message.text);
@@ -106,24 +107,21 @@ controller.hears(['.$'], 'direct_message', function (bot, message) {
     });
 
     bot.reply(message, 'test');
+
 });
 
 
-
-/**
- * AN example of what could be:
- * Any un-handled direct mention gets a reaction and a pat response!
- */
-controller.on('direct_message,mention,direct_mention', function (bot, message) {
-   bot.api.reactions.add({
-       timestamp: message.ts,
-       channel: message.channel,
-       name: 'robot_face',
-   }, function (err) {
-       if (err) {
-           console.log(err)
-       }
-       console.log(message.text );
-       bot.reply(message, 'I heard you loud and clear boss.');
-   });
-});
+// controller.hears(['.$'], 'direct_message,direct_mention,mention', function (bot, message) {
+//     bot.reply(message, 'U Down Breh!');
+//     // persist new users to database
+//     controller.storage.users.get(message.user,function(err, user) {
+// 	    if (!user) {
+// 		user = {
+// 		   id: message.user,
+// 	    	};
+// 	    	controller.storage.users.save(user,function(err, id) {
+// 	    	    console.log('user stored in the database');
+// 	    	});
+// 	    }
+//     });
+// });
