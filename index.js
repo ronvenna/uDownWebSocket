@@ -3,6 +3,26 @@
  */
 
 
+
+/**
+*  Get all of the users for a given string of text
+*/
+function getUsersFromMessage(text) {
+    var stringList = text.split(" ");
+    var returnArray = [];
+    stringList.forEach(function(string){
+        if(string.substring(0,2) == "<@"){
+            var user = string.substring(2,11);
+            returnArray.push(user);
+        }
+    });
+
+    return returnArray;
+};
+
+
+
+
 /**
  * Define a function for initiating a conversation on installation
  * With custom integrations, we don't have a way to find out who installed us, so we can't message them :(
@@ -76,7 +96,16 @@ controller.on('bot_channel_join', function (bot, message) {
 });
 
 controller.hears(['.$'], 'direct_message', function (bot, message) {
-    bot.reply(message, 'U Down Breh!');
+    console.log("TEXT FROM MESSAGE", message);
+    var usersFromMessage  = getUsersFromMessage(message.text);
+
+    usersFromMessage.forEach(function(user){
+        bot.startPrivateConversation({user: user}, function(response, convo){
+          convo.say('Sup breh breh');
+        });
+    });
+
+    bot.reply(message, 'test');
 });
 
 
@@ -85,15 +114,16 @@ controller.hears(['.$'], 'direct_message', function (bot, message) {
  * AN example of what could be:
  * Any un-handled direct mention gets a reaction and a pat response!
  */
-//controller.on('direct_message,mention,direct_mention', function (bot, message) {
-//    bot.api.reactions.add({
-//        timestamp: message.ts,
-//        channel: message.channel,
-//        name: 'robot_face',
-//    }, function (err) {
-//        if (err) {
-//            console.log(err)
-//        }
-//        bot.reply(message, 'I heard you loud and clear boss.');
-//    });
-//});
+controller.on('direct_message,mention,direct_mention', function (bot, message) {
+   bot.api.reactions.add({
+       timestamp: message.ts,
+       channel: message.channel,
+       name: 'robot_face',
+   }, function (err) {
+       if (err) {
+           console.log(err)
+       }
+       console.log(message.text );
+       bot.reply(message, 'I heard you loud and clear boss.');
+   });
+});
