@@ -75,8 +75,19 @@ controller.on('bot_channel_join', function (bot, message) {
     bot.reply(message, "I'm here!")
 });
 
-controller.hears(['.$'], 'direct_message', function (bot, message) {
+controller.hears(['.$'], 'direct_message,direct_mention,mention', function (bot, message) {
     bot.reply(message, 'U Down Breh!');
+    // persist new users to database
+    controller.storage.users.get(message.user,function(err, user) {
+	    if (!user) {
+		user = {
+		   id: message.user,
+	    	};
+	    	controller.storage.users.save(user,function(err, id) {
+	    	    console.log('user stored in the database');
+	    	});
+	    }
+    });
 });
 
 
