@@ -81,10 +81,11 @@ function sayYesToEvent(eventId, userId, callback){
             callback(err);
         }else{
 
-            event.invited.forEach(function(userInvited){
+            event.invited.forEach(function(userInvited, key){
                 console.log("USERRRRR", userInvited);
                 if(userInvited.id == userId){
                     event.attending.push(userInvited);
+		    delete event.invited[key];
                     createEvent(event, function(err,id){
                         if(err){
                             callback(err);
