@@ -223,8 +223,7 @@ var askIfTheyWantToMakeAnEvent = function(response, convo) {
                     convo.next();
                 }
                 else{
-                    convo.say('Sorry didnt get you! Lets Try again.');
-                    tryAgain(response, convo);
+                    convo.say('Sorry didnt get you! Lets Try Some other time.');
                     convo.next();
                 }
             });
@@ -253,8 +252,7 @@ var askWho = function(response, convo, bot, userName) {
         askWhen(response, convo, bot, userName);
         convo.next();
     }else{
-        convo.say('Sorry didnt see any invites! Lets Try again.');
-        tryAgain(response, convo);
+        convo.say('Sorry didnt see any invites! Try Again');
         convo.next();
     }
   });
@@ -276,7 +274,7 @@ var askWhen = function(response, convo, bot, userName) {
         name: place + "@" + time,
         location: place,
         time: time,
-        attending:[],
+        attending:[response.user],
         invited: who,
         teamID: team
     };
