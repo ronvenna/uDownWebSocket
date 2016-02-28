@@ -56,6 +56,7 @@ function getTeamToken(teamID, callback){
         if(err){
             callback(err);
         }else{
+            console.log("TEAM", team);
             callback(null, team.token);
         }
     });
@@ -68,6 +69,31 @@ function getEventById(eventId, callback){
             callback(err);
         }else{
             callback(null, event);
+        }
+    });
+}
+
+function sayYesToEvent(eventId, userId, callback){
+    console.log("EVENTID", eventId);
+    console.log("USERID", userId);
+    controller.storage.events.get(eventId, function(err, event) {
+        if(err){
+            callback(err);
+        }else{
+
+            event.invited.forEach(function(userInvited){
+                console.log("USERRRRR", userInvited);
+                if(userInvited.id == userId){
+                    event.attending.push(userInvited);
+                    createEvent(event, function(err,id){
+                        if(err){
+                            callback(err);
+                        }else{
+                            callback(null, id);
+                        }
+                    });
+                }
+            });
         }
     });
 }
@@ -242,7 +268,7 @@ var askWhen = function(response, convo, bot, userName) {
     var place = responses['Where?'];
     var time = responses['What time should I set this event to?'];
     var who = getUsersFromMessage(responses['Who Would You like to Invite?']);
-    var team = response.team.toLowerCase();
+    var team = response.team;
 
 
     var event = {
@@ -269,14 +295,24 @@ var askWhen = function(response, convo, bot, userName) {
 
               // start a conversation to handle this response.
               bot.startPrivateConversation({user: user},function(err,convo) {
-
+                console.log("TEAMID", event.teamID);
+                getTeamToken(event.teamID, function(err, token){
+                    if(err) bot.reply(message, 'Sorry, im having an error!');
+                    //Get the user object
+                    getUserFromAdminToken(token, user, function(err,userObj){
+                        if(err) bot.reply(message, 'Sorry, im having an error!');
+                        //Save the user
+                        console.log("USER", userObj);
+                        controller.storage.users.save(userObj,function(err, id) {
+                            console.log('user stored in the database', userObj.id);
                 bot.utterances.yes = new RegExp(/^(yes|yea|yup|yep|ya|sure|ok|y|yeah|yah|down|i'm down|imdown|im down)/i);
                 bot.utterances.no = new RegExp(/^(no|nah|nope|n|not down|notdown|naww|naw)/i);
 
-                controller.storage.users.get(user,function(err, userNameId) {
+                controller.storage.users.get(userObj.id,function(err, userNameId) {
                     if(err){
                         console.log("ERR", err)
                     }else{
+                        console.log(userNameId);
                         convo.say("Hey " + userNameId.name + "! " + userName + " wants to go to " + place + " at " + time);
                         convo.say("To Check the status of this go to http://u-down.herokuapp.com/" + event.id);
                         convo.ask("U Down? ",[
@@ -290,9 +326,15 @@ var askWhen = function(response, convo, bot, userName) {
                           {
                             pattern: bot.utterances.yes,
                             callback: function(response,convo) {
-                              convo.say('Great! I will put you down as going!');
-                              convo.next();
-
+                              sayYesToEvent(event.id, response.user, function(err, response){
+                                    if(err){
+                                        convo.say('Sorry! I had an error updating the event!');
+                                        convo.next();
+                                    }else{
+                                        convo.say('Great! I will put you down as going!');
+                                        convo.next();
+                                    }
+                              });
                             }
                           },
                           {
@@ -312,6 +354,10 @@ var askWhen = function(response, convo, bot, userName) {
                           }
                         ]);
                     }
+                });
+
+                        }); 
+                    });
                 });
               });
         });
@@ -356,30 +402,30 @@ controller.hears(['.$'], 'direct_message,direct_mention,mention', function (bot,
 //     else if(usersFromMessage.length == 0){
 //         bot.reply(message, "Hey! I plan events, please give me a time a place and some people you want to invite and I can notify them about the event. Do you want to plan an event?");
 //     }else{
-//         //Get the team token
-//         getTeamToken(message.team, function(err, token){
-//             if(err) bot.reply(message, 'Sorry, im having an error!');
-//             //Get the user object
-//             getUserFromAdminToken(token, message.user, function(err,user){
-//                 if(err) bot.reply(message, 'Sorry, im having an error!');
-//                 //Save the user
-//                 controller.storage.users.save(user,function(err, id) {
-//                     console.log('user stored in the database');
+        //Get the team token
+    //     getTeamToken(message.team, function(err, token){
+    //         if(err) bot.reply(message, 'Sorry, im having an error!');
+    //         //Get the user object
+    //         getUserFromAdminToken(token, message.user, function(err,user){
+    //             if(err) bot.reply(message, 'Sorry, im having an error!');
+    //             //Save the user
+    //             controller.storage.users.save(user,function(err, id) {
+    //                 console.log('user stored in the database');
 
-//                     usersFromMessage.forEach(function(userFromTest){
+    //                 usersFromMessage.forEach(function(userFromTest){
 
-//                         //Make sure we get the team of this user so we can get the user name and pictures to create the event
+    //                     //Make sure we get the team of this user so we can get the user name and pictures to create the event
 
-//                         bot.startPrivateConversation({user: userFromTest}, function(response, convo){
-//                           convo.say(user.name + " wants to get lunch with you breh! To check the status of this event click this link broski. " + "http://u-down.herokuapp.com/");
-//                         });
-//                     });
+    //                     bot.startPrivateConversation({user: userFromTest}, function(response, convo){
+    //                       convo.say(user.name + " wants to get lunch with you breh! To check the status of this event click this link broski. " + "http://u-down.herokuapp.com/");
+    //                     });
+    //                 });
 
-//                     bot.reply(message, 'Cool I have notified your users about the event! you can use this link to see if they are down to come! http://u-down.herokuapp.com/');
-//                 }); 
-//             });
-//         });
-//     }
+    //                 bot.reply(message, 'Cool I have notified your users about the event! you can use this link to see if they are down to come! http://u-down.herokuapp.com/');
+    //             }); 
+    //         });
+    //     });
+    // }
 
 // });
 
