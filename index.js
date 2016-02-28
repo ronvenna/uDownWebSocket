@@ -1,9 +1,9 @@
 /**
- * A Bot for Slack!
+ * uDown Bot for Slack!
  */
  var request = require('request');
-
-
+ var underscore = require('underscore');
+ var extend = underscore.extend;
 
 /**
 *  Get all of the users for a given string of text
@@ -51,7 +51,28 @@ function getTeamToken(teamID, callback){
     });
 };
 
+function getEventById(eventId, callback){
+    console.log("Getting an event with id "+eventId);
+    controller.storage.events.get(eventId, function(err, event) {
+        if(err){
+            callback(err);
+        }else{
+            callback(null, event);
+        }
+    });
+}
 
+function createEvent(event, callback){
+    console.log("Creating an event");
+    controller.storage.events.save(event,function(err, id){
+        console.log('event stored in the database');	
+    	if(err){
+	    callback(err);
+	} else {
+	    callback(null, event);
+	}
+    });
+}
 
 
 /**
@@ -80,9 +101,12 @@ function onInstallation(bot, installer) {
 var config = {};
 if (process.env.MONGOLAB_URI) {
     var BotkitStorage = require('botkit-storage-mongo');
+    var uDownBotKitStorge = require('./lib/db/index.js');
+ 
     config = {
         storage: BotkitStorage({mongoUri: process.env.MONGOLAB_URI}),
     };
+    config.storage = extend({},config.storage,uDownBotKitStorge({ mongoUri: process.env.MONGOLAB_URI }));
 } else {
     config = {
         json_file_store: ((process.env.TOKEN)?'./db_slack_bot_ci/':'./db_slack_bot_a/'), //use a different name if an app or CI
@@ -143,6 +167,10 @@ controller.on('direct_message', function (bot, message) {
     });
 });
 
+    getEventById("test", function(error, event){
+	console.log(error);
+	console.log(event);
+    });
 
 var askIfTheyWantToMakeAnEvent = function(response, convo) {
     
