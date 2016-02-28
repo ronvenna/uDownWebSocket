@@ -1,6 +1,7 @@
 /**
  * A Bot for Slack!
  */
+ var request = require('request');
 
 
 
@@ -18,6 +19,36 @@ function getUsersFromMessage(text) {
     });
 
     return returnArray;
+};
+
+function getUserFromAdminToken(token,user,callback) { 
+    var options = { method: 'GET',
+      url: 'https://slack.com/api/users.info',
+      qs: 
+       { token: token,
+         user: user,
+         pretty: '1' 
+       },
+      json: true };
+
+    request(options, function (error, response, body) {
+      if (error){
+        callback(error);
+      }else{
+        callback(null, body.user);
+      }
+    });
+};
+
+
+function getTeamToken(teamID, callback){
+    controller.storage.teams.get(teamID, function(err, team) {
+        if(err){
+            callback(err);
+        }else{
+            callback(null, team.token);
+        }
+    });
 };
 
 
@@ -100,28 +131,72 @@ controller.hears(['.$'], 'direct_message', function (bot, message) {
     console.log("TEXT FROM MESSAGE", message);
     var usersFromMessage  = getUsersFromMessage(message.text);
 
-    usersFromMessage.forEach(function(user){
-        bot.startPrivateConversation({user: user}, function(response, convo){
-          convo.say('Sup breh breh');
+    console.log(message.user);
+
+
+    //Get the team token
+    getTeamToken(message.team, function(err, token){
+        if(err) bot.reply(message, 'Sorry, im having an error!');
+        //Get the user object
+        getUserFromAdminToken(token, message.user, function(err,user){
+            if(err) bot.reply(message, 'Sorry, im having an error!');
+            //Save the user
+            controller.storage.users.save(user,function(err, id) {
+                console.log('user stored in the database');
+
+                usersFromMessage.forEach(function(userFromTest){
+
+                    //Make sure we get the team of this user so we can get the user name and pictures to create the event
+
+                    bot.startPrivateConversation({user: userFromTest}, function(response, convo){
+                      convo.say(user.name + " wants to get lunch with you breh! To check the status of this event click this link broski. " + "http://u-down.herokuapp.com/");
+                    });
+                });
+
+                bot.reply(message, 'I have notified your users about the event');
+            }); 
         });
     });
 
-    bot.reply(message, 'test');
+
+
+    // controller.storage.users.get(message.user,function(err, user) {
+    //     if(!user){
+    //         console.log(err);
+    //         controller.storage.users.save(message.user,function(err, id) {
+    //             console.log('user stored in the database');
+    //         });
+    //     }else{
+    //         console.log("GOT USER!", user);
+
+    //         usersFromMessage.forEach(function(userFromTest){
+
+    //             //Make sure we get the team of this user so we can get the user name and pictures to create the event
+
+    //             bot.startPrivateConversation({user: userFromTest}, function(response, convo){
+    //               convo.say(user.user + " wants to get lunch with you breh! To check the status of this event click this link broski. " + "http://u-down.herokuapp.com/");
+    //             });
+    //         });
+
+    //         bot.reply(message, 'I have notified your users about the event');
+    //     }
+    // });
+
 
 });
 
 
-// controller.hears(['.$'], 'direct_message,direct_mention,mention', function (bot, message) {
-//     bot.reply(message, 'U Down Breh!');
-//     // persist new users to database
-//     controller.storage.users.get(message.user,function(err, user) {
-// 	    if (!user) {
-// 		user = {
-// 		   id: message.user,
-// 	    	};
-// 	    	controller.storage.users.save(user,function(err, id) {
-// 	    	    console.log('user stored in the database');
-// 	    	});
-// 	    }
-//     });
-// });
+controller.hears(['.$'], 'direct_message,direct_mention,mention', function (bot, message) {
+    bot.reply(message, 'U Down Breh!');
+    // persist new users to database
+    controller.storage.users.get(message.user,function(err, user) {
+	    if (!user) {
+		user = {
+		   id: message.user,
+	    	};
+	    	controller.storage.users.save(user,function(err, id) {
+	    	    console.log('user stored in the database');
+	    	});
+	    }
+    });
+});
