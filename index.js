@@ -176,31 +176,6 @@ var controller = app.configure(port, "23350178224.23361502390", "19938eaef76e57d
 //   _bots[bot.config.token] = bot;
 // }
 
-// controller.on('create_bot',function(bot,config) {
-
-//   if (_bots[bot.config.token]) {
-//     // already online! do nothing.
-//   } else {
-//     bot.startRTM(function(err) {
-
-//       if (!err) {
-//         trackBot(bot);
-//       }
-
-//       bot.startPrivateConversation({user: config.createdBy},function(err,convo) {
-//         if (err) {
-//           console.log(err);
-//         } else {
-//           convo.say('I am a bot that has just joined your team');
-//           convo.say('You must now /invite me to a channel so that I can be of use!');
-//         }
-//       });
-
-//     });
-//   }
-
-// });
-
 controller.on('rtm_open', function (bot) {
     console.log('** The RTM api just connected!');
 });
@@ -408,7 +383,7 @@ var askWhen = function(response, convo, bot, userName) {
 //   });
 // }
 
-controller.hears(["^hey(.*)","^hello(.*)","^hi(.*)","^h(.*)"],['direct_message','direct_mention','mention','ambient'],function(bot,message) {
+controller.hears(["^hey(.*)","^hello(.*)","^hi(.*)","^h(.*)",],['direct_message','direct_mention','mention','ambient'],function(bot,message) {
 
     this.bot = bot;
     bot.startConversation(message, askIfTheyWantToMakeAnEvent.bind(this));
@@ -419,72 +394,3 @@ controller.hears(['.$'], 'direct_message,direct_mention,mention', function (bot,
     bot.reply(message, 'Sorry didnt get you!');
     bot.startConversation(message, askIfTheyWantToMakeAnEvent.bind(this));
 });
-
-// controller.storage.teams.all(function(err,teams) {
-
-//   if (err) {
-//     throw new Error(err);
-//   }
-
-//   // connect all teams with bots up to slack!
-//   for (var t  in teams) {
-//     console.log("TEAM", teams[t]);
-//     if (teams[t].bot) {
-//       var bot = controller.spawn(teams[t]).startRTM(function(err) {
-//         if (err) {
-//           console.log('Error connecting bot to Slack:',err);
-//         } else {
-//           console.log("tracking");
-//           trackBot(bot);
-//         }
-//       });
-//     }
-//   }
-
-// });
-
-
-// controller.hears(['dbdbhdhfs'], 'direct_message', function (bot, message) {
-//     console.log("TEXT FROM MESSAGE", message);
-//     var usersFromMessage  = getUsersFromMessage(message.text);
-
-
-
-//     if(["y","yes","yea","yup"].indexOf(message.text.toLowerCase()) > -1){
-//         bot.reply(message, "Ok just give me a place and time and a few of your friends!");
-//     }
-//     //Check to make sure there are some users in the event they want to create
-//     else if(usersFromMessage.length == 0){
-//         bot.reply(message, "Hey! I plan events, please give me a time a place and some people you want to invite and I can notify them about the event. Do you want to plan an event?");
-//     }else{
-        //Get the team token
-    //     getTeamToken(message.team, function(err, token){
-    //         if(err) bot.reply(message, 'Sorry, im having an error!');
-    //         //Get the user object
-    //         getUserFromAdminToken(token, message.user, function(err,user){
-    //             if(err) bot.reply(message, 'Sorry, im having an error!');
-    //             //Save the user
-    //             controller.storage.users.save(user,function(err, id) {
-    //                 console.log('user stored in the database');
-
-    //                 usersFromMessage.forEach(function(userFromTest){
-
-    //                     //Make sure we get the team of this user so we can get the user name and pictures to create the event
-
-    //                     bot.startPrivateConversation({user: userFromTest}, function(response, convo){
-    //                       convo.say(user.name + " wants to get lunch with you breh! To check the status of this event click this link broski. " + "http://u-down.herokuapp.com/");
-    //                     });
-    //                 });
-
-    //                 bot.reply(message, 'Cool I have notified your users about the event! you can use this link to see if they are down to come! http://u-down.herokuapp.com/');
-    //             }); 
-    //         });
-    //     });
-    // }
-
-// });
-
-
-// controller.hears(['.$'], 'direct_message,direct_mention,mention', function (bot, message) {
-//     bot.reply(message, 'Sorry didnt get you!, can you try again?');;
-// });
